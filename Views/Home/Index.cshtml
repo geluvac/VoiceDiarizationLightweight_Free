@@ -1,0 +1,205 @@
+@{
+    ViewData["Title"] = "Speaker identification - FREE";
+}
+
+<header class="app-header">
+    <div class="container-fluid d-flex flex-wrap align-items-center gap-3">
+        <div class="me-auto">
+            <h1 class="app-title">Voice Diarization Lightweight - <span class="text-success">FREE</span> - Gelu VAC - <span class="text-warning">IT Days 2026</span></h1>
+            <div class="app-sub">FFT → Mel filterbank → MFCC → L2 fingerprint → nearest-centroid · everything runs in your browser</div>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <button id="btnStartAll" class="btn btn-warning btn-sm fw-semibold">▶ Start all</button>
+            <button id="btnStopAll" class="btn btn-outline-light btn-sm">■ Stop all</button>
+            <button id="btnReset" class="btn btn-outline-light btn-sm">⟲ Reset speakers</button>
+            <label class="btn btn-outline-light btn-sm mb-0" title="Analyze an audio file instead of the microphone">
+                ♫ Audio file <input id="fileInput" type="file" accept="audio/*" hidden />
+            </label>
+            <button id="btnUseMic" class="btn btn-outline-light btn-sm d-none">🎙 Back to mic</button>
+        </div>
+    </div>
+</header>
+
+<section class="container-fluid status-bar">
+    <div class="d-flex flex-wrap align-items-center gap-4">
+        <div><span class="lbl">Source</span> <span id="srcState" class="val">off</span></div>
+        <div><span class="lbl">Sample rate</span> <span id="srState" class="val">–</span></div>
+        <div class="slider-group">
+            <label for="vadTh" class="lbl">VAD threshold (RMS)</label>
+            <input id="vadTh" type="range" min="0.003" max="0.1" step="0.001" value="0.015" />
+            <span id="vadThVal" class="val">0.015</span>
+        </div>
+        <div class="slider-group">
+            <label for="gapMs" class="lbl">Silence gap</label>
+            <input id="gapMs" type="range" min="150" max="1500" step="50" value="450" />
+            <span id="gapMsVal" class="val">450 ms</span>
+        </div>
+        <div><span class="lbl">θ</span> <span id="thetaVal" class="val">0.70</span> <span id="thetaSrc" class="src">initial θ₀</span></div>
+        <div id="speakerChips" class="d-flex flex-wrap gap-2"></div>
+    </div>
+</section>
+
+<main class="container-fluid pb-4">
+    <div class="row g-3">
+
+        <div class="col-xxl-4 col-lg-6">
+            <div class="card stage" data-stage="1">
+                <div class="card-body">
+                    <div class="stage-head">
+                        <span class="stage-num">1</span>
+                        <div>
+                            <h2>Waveform &amp; voice activity</h2>
+                            <p>Raw microphone signal, last 6 seconds. Each column is one 2048-sample frame.</p>
+                        </div>
+                    </div>
+                    <div class="stage-btns">
+                        <button class="btn btn-sm btn-success" data-act="start">▶ Start</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-act="stop" disabled>■ Stop</button>
+                        <button class="btn btn-sm btn-outline-primary" data-act="hl">◎ Fingerprint zone</button>
+                        <span class="stage-state">idle</span>
+                    </div>
+                    <canvas></canvas>
+                    <div class="hl-note">Only the <b>green frames</b>, whose RMS energy exceeds the VAD threshold (orange line), enter the utterance buffer. Silence and background noise never reach the fingerprint.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xxl-4 col-lg-6">
+            <div class="card stage" data-stage="2">
+                <div class="card-body">
+                    <div class="stage-head">
+                        <span class="stage-num">2</span>
+                        <div>
+                            <h2>FFT power spectrum</h2>
+                            <p>Current frame in the frequency domain (dB), 0–11 kHz.</p>
+                        </div>
+                    </div>
+                    <div class="stage-btns">
+                        <button class="btn btn-sm btn-success" data-act="start">▶ Start</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-act="stop" disabled>■ Stop</button>
+                        <button class="btn btn-sm btn-outline-primary" data-act="hl">◎ Fingerprint zone</button>
+                        <span class="stage-state">idle</span>
+                    </div>
+                    <canvas></canvas>
+                    <div class="hl-note">The mel filterbank only reads <b>80–8,000 Hz</b> (light band). The darker band, <b>300–3,400 Hz</b>, holds the formants F1–F3 shaped by the vocal tract: the core of vocal identity.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xxl-4 col-lg-6">
+            <div class="card stage" data-stage="3">
+                <div class="card-body">
+                    <div class="stage-head">
+                        <span class="stage-num">3</span>
+                        <div>
+                            <h2>Mel filterbank (26 filters)</h2>
+                            <p>Log energy of each triangular filter, spaced uniformly on the mel scale.</p>
+                        </div>
+                    </div>
+                    <div class="stage-btns">
+                        <button class="btn btn-sm btn-success" data-act="start">▶ Start</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-act="stop" disabled>■ Stop</button>
+                        <button class="btn btn-sm btn-outline-primary" data-act="hl">◎ Fingerprint zone</button>
+                        <span class="stage-state">idle</span>
+                    </div>
+                    <canvas></canvas>
+                    <div class="hl-note">Filters centred between <b>250 and 4,000 Hz</b> are narrow and dense: they resolve the formant structure. The triangles show how each filter weighs the spectrum: mel(f) = 2595 · log₁₀(1 + f/700).</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xxl-4 col-lg-6">
+            <div class="card stage" data-stage="4">
+                <div class="card-body">
+                    <div class="stage-head">
+                        <span class="stage-num">4</span>
+                        <div>
+                            <h2>MFCC (c₀ … c₁₃)</h2>
+                            <p>Discrete cosine transform of the mel log energies, current frame.</p>
+                        </div>
+                    </div>
+                    <div class="stage-btns">
+                        <button class="btn btn-sm btn-success" data-act="start">▶ Start</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-act="stop" disabled>■ Stop</button>
+                        <button class="btn btn-sm btn-outline-primary" data-act="hl">◎ Fingerprint zone</button>
+                        <span class="stage-state">idle</span>
+                    </div>
+                    <canvas></canvas>
+                    <div class="hl-note"><b>c₁–c₁₃</b> describe the vocal tract and form the voiceprint. <b>c₀ is excluded</b>: it is the total frame energy, so it measures loudness, not identity.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xxl-4 col-lg-6">
+            <div class="card stage" data-stage="5">
+                <div class="card-body">
+                    <div class="stage-head">
+                        <span class="stage-num">5</span>
+                        <div>
+                            <h2>Utterance fingerprint (L2)</h2>
+                            <p>fp = mean(liftered MFCC frames k·c<sub>k</sub>) / ‖μ‖₂. Stop closes the current sample immediately.</p>
+                        </div>
+                    </div>
+                    <div class="stage-btns">
+                        <button class="btn btn-sm btn-success" data-act="start">▶ Start</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-act="stop" disabled>■ Stop</button>
+                        <button class="btn btn-sm btn-outline-primary" data-act="hl">◎ Fingerprint zone</button>
+                        <span class="stage-state">idle</span>
+                    </div>
+                    <canvas></canvas>
+                    <div class="hl-note">Dots show the centroid of the matched speaker. Shaded dimensions are the ones that <b>differ most between known speakers</b>: they carry most of the discrimination. Raw vectors are averaged first, then normalized; the reverse order cancels them out.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xxl-4 col-lg-6">
+            <div class="card stage" data-stage="6">
+                <div class="card-body">
+                    <div class="stage-head">
+                        <span class="stage-num">6</span>
+                        <div>
+                            <h2>Nearest-centroid decision</h2>
+                            <p>speaker* = argminᵢ ‖fp − centroidᵢ‖₂. Above θ, a new speaker is created.</p>
+                        </div>
+                    </div>
+                    <div class="stage-btns">
+                        <button class="btn btn-sm btn-success" data-act="start">▶ Start</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-act="stop" disabled>■ Stop</button>
+                        <button class="btn btn-sm btn-outline-primary" data-act="hl">◎ Fingerprint zone</button>
+                        <span class="stage-state">idle</span>
+                    </div>
+                    <canvas></canvas>
+                    <div class="hl-note">The green zone [0, θ] is where a fingerprint is accepted as an existing speaker. θ starts at 0.7, becomes d_inter / 2 once two speakers exist and max(3σ_intra, 0.15) after 5 utterances (the smaller of the two), capped at 0.8.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card stage" data-stage="7">
+                <div class="card-body">
+                    <div class="stage-head">
+                        <span class="stage-num">7</span>
+                        <div>
+                            <h2>Diarization timeline: who spoke when</h2>
+                            <p>Each closed utterance becomes a segment on the lane of the speaker it was assigned to (last 60 seconds).</p>
+                        </div>
+                    </div>
+                    <div class="stage-btns">
+                        <button class="btn btn-sm btn-success" data-act="start">▶ Start</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-act="stop" disabled>■ Stop</button>
+                        <button class="btn btn-sm btn-outline-primary" data-act="hl">◎ Fingerprint zone</button>
+                        <span class="stage-state">idle</span>
+                    </div>
+                    <canvas class="timeline"></canvas>
+                    <div class="hl-note">★ marks the moment a new voiceprint was created. Hatched segments were accepted with a small margin (d &gt; 0.8 θ). Faded segments are short samples (&lt; 0.75 s): assigned to the nearest speaker without updating its voiceprint.</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+@section Scripts {
+    <script src="~/js/dsp.js" asp-append-version="true"></script>
+    <script src="~/js/diarization.js" asp-append-version="true"></script>
+}
