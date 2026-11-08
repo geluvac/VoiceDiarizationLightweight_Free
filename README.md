@@ -1,93 +1,95 @@
-# VoiceDiarizationLightweight
+# VoiceDiarizationLightweight - FREE
 
-Aplicație ASP.NET Core (MVC, .NET 8) care arată, pe un singur ecran, toate etapele identificării vorbitorului din articolul *Real-Time Speaker Diarization*:
+**English** | [Română](README.ro.md)
 
-| # | Etapă | Ce arată butonul **◎ Fingerprint zone** |
-|---|-------|------------------------------------------|
-| 1 | Waveform & voice activity | cadrele cu RMS > pragul VAD (verde), adică singurele care intră în amprentă |
-| 2 | FFT power spectrum | banda 80–8.000 Hz citită de filtrele mel și zona formanților 300–3.400 Hz |
-| 3 | Mel filterbank (26 de filtre) | filtrele cu centrul între 250 și 4.000 Hz și forma triunghiulară a filtrelor |
-| 4 | MFCC c₀…c₁₃ | c₁–c₁₃ = amprenta; c₀ (volumul) e exclus |
-| 5 | Amprenta L2 a mostrei | centroidul vorbitorului găsit și cele 4 dimensiuni care diferă cel mai mult între vorbitori |
-| 6 | Decizia nearest-centroid | zona de acceptare [0, θ] și vorbitorul câștigător |
-| 7 | Timeline „cine a vorbit când” | ★ = vorbitor nou creat; hașurat = decizie la limită; estompat = mostră scurtă |
+An ASP.NET Core (MVC, .NET 8) app that shows, on a single screen, every stage of speaker identification from the article *Real-Time Speaker Diarization*:
 
-Fiecare grafic are **▶ Start / ■ Stop** propriu. Start pornește graficul live, iar Stop îl îngheață pe ultima mostră. La etapa 5, Stop închide imediat mostra de voce curentă și o clasifică. Când niciun grafic nu mai rulează, microfonul se eliberează.
+| # | Stage | What the **◎ Fingerprint zone** button shows |
+|---|-------|-----------------------------------------------|
+| 1 | Waveform & voice activity | frames with RMS > the VAD threshold (green), the only ones that enter the fingerprint |
+| 2 | FFT power spectrum | the 80–8,000 Hz band read by the mel filters and the 300–3,400 Hz formant zone |
+| 3 | Mel filterbank (26 filters) | filters centred between 250 and 4,000 Hz and the triangular shape of the filters |
+| 4 | MFCC c₀…c₁₃ | c₁–c₁₃ = the fingerprint; c₀ (loudness) is excluded |
+| 5 | L2 fingerprint of the sample | the centroid of the matched speaker and the 4 dimensions that differ most between speakers |
+| 6 | Nearest-centroid decision | the acceptance zone [0, θ] and the winning speaker |
+| 7 | "Who spoke when" timeline | ★ = new speaker created; hatched = borderline decision; faded = short sample |
 
-Toată procesarea se face în browser (Web Audio API). Niciun sunet nu ajunge la server.
+Each chart has its own **▶ Start / ■ Stop**. Start runs the chart live; Stop freezes it on the last sample. On stage 5, Stop immediately closes the current voice sample and classifies it. When no chart is running, the microphone is released.
 
-## Cum o pornești
+All processing happens in the browser (Web Audio API). No audio is ever sent to the server.
 
-Ai nevoie de .NET 8 SDK și de Chrome sau Edge.
+## Running it
+
+You need the .NET 8 SDK and Chrome or Edge.
 
 ```bash
-cd VoiceDiarizationLightweight
+cd VoiceDiarizationLightweight_Free
 dotnet run --launch-profile https
 ```
 
-Deschide https://localhost:7241 și permite accesul la microfon. Microfonul funcționează doar pe HTTPS sau pe localhost. Dacă browserul nu are încredere în certificatul de dezvoltare, rulează o dată `dotnet dev-certs https --trust`.
+Open https://localhost:7241 and allow microphone access. The microphone only works over HTTPS or on localhost. If the browser does not trust the development certificate, run `dotnet dev-certs https --trust` once.
 
-Din Visual Studio: deschizi `VoiceDiarizationLightweight.csproj` și apeși F5.
+From Visual Studio: open `VoiceDiarizationLightweightFree.csproj` and press F5.
 
-## Utilizare
+## Usage
 
-- **Start all / Stop all** pornesc sau opresc toate etapele deodată.
-- **Reset speakers** șterge vorbitorii și timeline-ul.
-- **Audio file** analizează un fișier în loc de microfon, iar sunetul se aude în difuzoare. În `samples/` ai două conversații de test:
-  - `conv_male_female.wav`: o voce de bărbat și una de femeie
-  - `conv_two_males.wav`: două voci de bărbat, cazul greu
+- **Start all / Stop all** start or stop every stage at once.
+- **Reset speakers** clears the speakers and the timeline.
+- **Audio file** analyzes a file instead of the microphone, and plays it through the speakers. `samples/` contains two test conversations:
+  - `conv_male_female.wav`: one male and one female voice
+  - `conv_two_males.wav`: two male voices, the hard case
 
-  Fișierele sunt utile ca backup la un demo live.
-- **VAD threshold** se reglează după zgomotul din sală. Linia portocalie din graficul 1 trebuie să stea deasupra zgomotului de fond și sub vorbire.
-- **Silence gap** e pauza după care o mostră se consideră încheiată.
+  The files are also useful as a backup for a live demo.
+- **VAD threshold** should be tuned to the room noise. The orange line in chart 1 should sit above the background noise and below speech.
+- **Silence gap** is the pause after which a sample is considered finished.
 
-Ca să meargă bine, vorbește fraze de cel puțin o secundă. Prima frază a fiecărui vorbitor îi creează amprenta.
+For best results, speak in phrases of at least one second. Each speaker's first phrase creates their fingerprint.
 
-## Pipeline și parametri
-
-```
-2048 eșantioane (≈ 46 ms) → FFT (AnalyserNode, fără smoothing)
-→ 26 de filtre mel 80–8000 Hz → log → DCT → c0…c13
-→ se elimină c0 → liftering k·c_k → media vectorilor bruți ai mostrei → normalizare L2
-→ nearest-centroid (centroid = media L2 a ultimelor 10 amprente)
-```
-
-Pragul θ:
-- începe la θ₀ = 0,7;
-- devine d_inter / 2 când există doi vorbitori;
-- devine max(3σ_intra; 0,15) după 5 mostre de la același vorbitor.
-
-Când ambele valori sunt disponibile se folosește cea mai mică. În toate cazurile θ ≤ 0,8.
-
-Câteva diferențe față de articol, alese după teste:
-
-1. **Liftering k·c_k.** Fără el, c₁ (panta spectrală) domină vectorul. Pe două voci de bărbat, distanța minimă dintre vorbitori era 0,38, iar distanța maximă în interiorul aceluiași vorbitor 0,44, deci intervalele se suprapuneau. Cu liftering, distanța între vorbitori începe de la 0,93.
-2. **θ₀ = 0,7 în loc de 0,5**, pentru că spațiul cu liftering e mai larg.
-3. **Plafon θ ≤ 0,8.** Fără el, 3σ_intra ajungea la 0,88 și pragul „înghițea” al doilea vorbitor.
-4. **Mostrele scurte** (sub 0,75 s, de exemplu cozile unei fraze tăiate la 4 s) nu pot crea un vorbitor nou. Sunt atribuite celui mai apropiat vorbitor, fără să-i modifice amprenta.
-
-Parametrii se schimbă în `wwwroot/js/diarization.js` (constantele de la început) și în `SpeakerModel` din `wwwroot/js/dsp.js`.
-
-## Testare
-
-Aplicația a fost testată în Chrome headless, cu microfon simulat, pe cele două conversații din `samples/`, timp de 75 de secunde (fișierul rulează de aproape două ori):
-
-- bărbat + femeie: 2 vorbitori, 22 de segmente, toate atribuite corect;
-- doi bărbați: 2 vorbitori, 20 de segmente, toate atribuite corect.
-
-Au mai fost verificate: Start/Stop pe fiecare etapă, eliberarea microfonului, modul fișier și resetarea.
-
-`dsp.js` nu folosește DOM, deci se poate testa și în Node: `require("./wwwroot/js/dsp.js")`.
-
-## Structură
+## Pipeline and parameters
 
 ```
-Program.cs                    pipeline ASP.NET minim + Permissions-Policy: microphone=(self)
+2048 samples (≈ 46 ms) → FFT (AnalyserNode, no smoothing)
+→ 26 mel filters 80–8000 Hz → log → DCT → c0…c13
+→ drop c0 → liftering k·c_k → mean of the sample's raw vectors → L2 normalization
+→ nearest-centroid (centroid = L2 mean of the last 10 fingerprints)
+```
+
+The threshold θ:
+- starts at θ₀ = 0.7;
+- becomes d_inter / 2 once two speakers exist;
+- becomes max(3σ_intra, 0.15) after 5 samples from the same speaker.
+
+When both values are available, the smaller one is used. In all cases θ ≤ 0.8.
+
+A few differences from the article, chosen after testing:
+
+1. **Liftering k·c_k.** Without it, c₁ (the spectral tilt) dominates the vector. On two male voices, the minimum distance between speakers was 0.38 and the maximum distance within the same speaker was 0.44, so the ranges overlapped. With liftering, the distance between speakers starts at 0.93.
+2. **θ₀ = 0.7 instead of 0.5**, because the liftered space is wider.
+3. **Cap θ ≤ 0.8.** Without it, 3σ_intra reached 0.88 and the threshold "swallowed" the second speaker.
+4. **Short samples** (under 0.75 s, e.g. the tail of a phrase cut at 4 s) cannot create a new speaker. They are assigned to the nearest speaker without changing that speaker's fingerprint.
+
+Parameters are set in `wwwroot/js/diarization.js` (the constants at the top) and in `SpeakerModel` in `wwwroot/js/dsp.js`.
+
+## Testing
+
+The app was tested in headless Chrome with a simulated microphone, on the two conversations in `samples/`, for 75 seconds (the file plays almost twice):
+
+- male + female: 2 speakers, 22 segments, all assigned correctly;
+- two males: 2 speakers, 20 segments, all assigned correctly.
+
+Also verified: Start/Stop on every stage, microphone release, file mode and reset.
+
+`dsp.js` does not use the DOM, so it can also be tested in Node: `require("./wwwroot/js/dsp.js")`.
+
+## Structure
+
+```
+Program.cs                    minimal ASP.NET pipeline + Permissions-Policy: microphone=(self)
 Controllers/HomeController.cs
-Views/Home/Index.cshtml       cele 7 etape
-wwwroot/js/dsp.js             mel, MFCC, liftering, L2, SpeakerModel (fără DOM)
-wwwroot/js/diarization.js     audio, buclă de procesare, grafice canvas, butoane
+Views/Home/Index.cshtml       the 7 stages
+wwwroot/js/dsp.js             mel, MFCC, liftering, L2, SpeakerModel (no DOM)
+wwwroot/js/diarization.js     audio, processing loop, canvas charts, buttons
 wwwroot/css/site.css
-wwwroot/lib/bootstrap/        Bootstrap 5.3.3 local (merge offline)
-samples/                      conversații de test
+wwwroot/lib/bootstrap/        local Bootstrap 5.3.3 (works offline)
+samples/                      test conversations
 ```
