@@ -1,4 +1,4 @@
-# VoiceDiarizationLightweight - FREE
+# VoiceDiarizationLightweight - FREE - pentru [IT DAYS 2026](https://itdays.ro/)
 
 [English](README.md) | **Română**
 
