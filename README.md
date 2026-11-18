@@ -2,7 +2,7 @@
 
 **English** | [Română](README.ro.md)
 
-An ASP.NET Core (MVC, .NET 8) app that shows, on a single screen, every stage of speaker identification from the article *Real-Time Speaker Diarization*:
+An ASP.NET Core (MVC, .NET 10) app that shows, on a single screen, every stage of speaker identification from the article *Real-Time Speaker Diarization*:
 
 | # | Stage | What the **◎ Fingerprint zone** button shows |
 |---|-------|-----------------------------------------------|

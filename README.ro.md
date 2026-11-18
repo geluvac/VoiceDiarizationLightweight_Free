@@ -2,7 +2,7 @@
 
 [English](README.md) | **Română**
 
-Aplicație ASP.NET Core (MVC, .NET 8) care arată, pe un singur ecran, toate etapele identificării vorbitorului din articolul *Real-Time Speaker Diarization*:
+Aplicație ASP.NET Core (MVC, .NET 10) care arată, pe un singur ecran, toate etapele identificării vorbitorului din articolul *Real-Time Speaker Diarization*:
 
 | # | Etapă | Ce arată butonul **◎ Fingerprint zone** |
 |---|-------|------------------------------------------|
